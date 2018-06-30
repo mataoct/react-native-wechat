@@ -12,6 +12,7 @@
 #import <React/RCTBridge.h>
 #import <React/RCTLog.h>
 #import <React/RCTImageLoader.h>
+#import <AssetsLibrary/AssetsLibrary.h>
 
 // Define error messages
 #define NOT_REGISTERED (@"registerApp required.")
@@ -143,10 +144,23 @@ RCT_EXPORT_METHOD(shareToTimeline:(NSDictionary *)data
     [self shareToWeixinWithData:data scene:WXSceneTimeline callback:callback];
 }
 
+RCT_EXPORT_METHOD(shareDefaultPhotoToTimeline:(NSDictionary *)data
+                  :(RCTResponseSenderBlock)callback)
+{
+    [self shareDefaultPhotoToWeixinWithData:data scene:WXSceneTimeline callback:callback];
+}
+
+
 RCT_EXPORT_METHOD(shareToSession:(NSDictionary *)data
                   :(RCTResponseSenderBlock)callback)
 {
     [self shareToWeixinWithData:data scene:WXSceneSession callback:callback];
+}
+
+RCT_EXPORT_METHOD(shareDefaultPhotoToSession:(NSDictionary *)data
+                  :(RCTResponseSenderBlock)callback)
+{
+    [self shareDefaultPhotoToWeixinWithData:data scene:WXSceneSession callback:callback];
 }
 
 RCT_EXPORT_METHOD(pay:(NSDictionary *)data
@@ -162,6 +176,8 @@ RCT_EXPORT_METHOD(pay:(NSDictionary *)data
     BOOL success = [WXApi sendReq:req];
     callback(@[success ? [NSNull null] : INVOKE_FAILED]);
 }
+
+
 
 - (void)shareToWeixinWithData:(NSDictionary *)aData
                    thumbImage:(UIImage *)aThumbImage
@@ -297,6 +313,57 @@ RCT_EXPORT_METHOD(pay:(NSDictionary *)data
 
 }
 
+- (void)shareDefaultPhotoToWeixinWithData:(NSDictionary *)aData scene:(int)aScene callback:(RCTResponseSenderBlock)aCallBack
+{
+    
+    UIWindow*screenWindow = [[UIApplication sharedApplication] keyWindow];
+    
+    UIGraphicsBeginImageContext(screenWindow.frame.size);
+    
+    [screenWindow.layer renderInContext:UIGraphicsGetCurrentContext()];
+    
+    UIImage* viewImage =UIGraphicsGetImageFromCurrentImageContext();
+    
+    UIGraphicsEndImageContext();
+
+    
+    
+    
+//    NSString *imageUrl = aData[RCTWXShareTypeThumbImageUrl];
+//    if (imageUrl.length && _bridge.imageLoader) {
+//        NSURL *url = [NSURL URLWithString:imageUrl];
+//        NSURLRequest *imageRequest = [NSURLRequest requestWithURL:url];
+//        [_bridge.imageLoader loadImageWithURLRequest:imageRequest size:CGSizeMake(100, 100) scale:1 clipped:FALSE resizeMode:RCTResizeModeStretch progressBlock:nil partialLoadBlock:nil
+//                                     completionBlock:^(NSError *error, UIImage *image) {
+//                                         [self shareToWeixinWithData:aData thumbImage:image scene:aScene callBack:aCallBack];
+//                                     }];
+//    } else {
+//        [self shareToWeixinWithData:aData thumbImage:viewImage scene:aScene callBack:aCallBack];
+    
+        WXImageObject *imageObject = [WXImageObject object];
+        imageObject.imageData = UIImagePNGRepresentation([UIPasteboard generalPasteboard].image);
+    
+    NSString * title = aData[RCTWXShareTitle];
+    NSString * description = aData[RCTWXShareDescription];
+    NSString * mediaTagName = aData[@"mediaTagName"];
+    NSString * messageAction = aData[@"messageAction"];
+    NSString * messageExt = aData[@"messageExt"];
+    
+    [self shareToWeixinWithMediaMessage:aScene
+                                  Title:title
+                            Description:description
+                                 Object:imageObject
+                             MessageExt:messageExt
+                          MessageAction:messageAction
+                             ThumbImage:viewImage
+                               MediaTag:mediaTagName
+                               callBack:aCallBack];
+    
+    
+//    }
+    
+}
+
 - (void)shareToWeixinWithTextMessage:(int)aScene
                                 Text:(NSString *)text
                                 callBack:(RCTResponseSenderBlock)callback
@@ -386,6 +453,30 @@ RCT_EXPORT_METHOD(pay:(NSDictionary *)data
 	        body[@"type"] = @"PayReq.Resp";
 	        [self.bridge.eventDispatcher sendDeviceEventWithName:RCTWXEventName body:body];
     	}
+}
+
+
+- (void)latestAsset:(void (^)(ALAsset * _Nullable, NSError *_Nullable))block {
+    [[ALAssetsLibrary new] enumerateGroupsWithTypes:ALAssetsGroupSavedPhotos usingBlock:^(ALAssetsGroup *group, BOOL *stop) {
+        if (group) {
+            [group setAssetsFilter:[ALAssetsFilter allPhotos]];
+            [group enumerateAssetsWithOptions:NSEnumerationReverse/*遍历方式*/ usingBlock:^(ALAsset *result, NSUInteger index, BOOL *stop) {
+                if (result) {
+                    if (block) {
+                        block(result,nil);
+                    }
+                    *stop = YES;
+                }
+            }];
+            *stop = YES;
+        }
+    } failureBlock:^(NSError *error) {
+        if (error) {
+            if (block) {
+                block(nil,error);
+            }
+        }
+    }];
 }
 
 @end

@@ -142,7 +142,10 @@ export const openWXApp = wrapApi(WeChat.openWXApp);
 
 // wrap the APIs
 const nativeShareToTimeline = wrapApi(WeChat.shareToTimeline);
+const nativeShareDefaultPhotoToTimeline = wrapApi(WeChat.shareDefaultPhotoToTimeline);
 const nativeShareToSession = wrapApi(WeChat.shareToSession);
+const nativeShareDefaultPhotoToSession = wrapApi(WeChat.shareDefaultPhotoToSession);
+const nativeShotcut = wrapApi(WeChat.shotcut)
 const nativeShareToFavorite = wrapApi(WeChat.shareToFavorite);
 const nativeSendAuthRequest = wrapApi(WeChat.sendAuthRequest);
 
@@ -190,6 +193,19 @@ export function shareToTimeline(data) {
   });
 }
 
+export function shareDefaultPhotoToTimeline(data) {
+  return new Promise((resolve, reject) => {
+    nativeShareDefaultPhotoToTimeline(data);
+    emitter.once('SendMessageToWX.Resp', resp => {
+      if (resp.errCode === 0) {
+        resolve(resp);
+      } else {
+        reject(new WechatError(resp));
+      }
+    });
+  });
+}
+
 /**
  * Share something to a friend or group
  * @method shareToSession
@@ -214,6 +230,24 @@ export function shareToSession(data) {
       }
     });
   });
+}
+
+export function shareDefaultPhotoToSession(data) {
+  return new Promise((resolve, reject) => {
+    nativeShareDefaultPhotoToSession(data);
+    emitter.once('SendMessageToWX.Resp', resp => {
+      if (resp.errCode === 0) {
+        resolve(resp);
+      } else {
+        reject(new WechatError(resp));
+      }
+    });
+  });
+}
+
+
+export function shotcut() {
+  nativeShareDefaultPhotoToSession
 }
 
 /**
